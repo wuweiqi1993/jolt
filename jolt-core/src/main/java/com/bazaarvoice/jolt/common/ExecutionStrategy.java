@@ -216,7 +216,7 @@ public enum ExecutionStrategy {
         void processList( OrderedCompositeSpec spec, List<Object> inputList, WalkedPath walkedPath, Map<String, Object> output, Map<String, Object> context ) {
             //如果遇到空数组就把空数组写回去
             writeEmptyList(spec, inputList, walkedPath, output);
-            
+
             Integer originalSize = walkedPath.lastElement().getOrigSize().get();
             for (int index = 0; index < inputList.size(); index++) {
                 Object subInput = inputList.get( index );
