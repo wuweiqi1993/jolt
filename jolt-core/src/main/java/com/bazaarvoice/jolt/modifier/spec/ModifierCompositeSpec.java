@@ -19,6 +19,7 @@ package com.bazaarvoice.jolt.modifier.spec;
 import com.bazaarvoice.jolt.common.ComputedKeysComparator;
 import com.bazaarvoice.jolt.common.ExecutionStrategy;
 import com.bazaarvoice.jolt.common.Optional;
+import com.bazaarvoice.jolt.common.PathEvaluatingTraversal;
 import com.bazaarvoice.jolt.common.pathelement.ArrayPathElement;
 import com.bazaarvoice.jolt.common.pathelement.LiteralPathElement;
 import com.bazaarvoice.jolt.common.pathelement.PathElement;
@@ -36,12 +37,7 @@ import com.bazaarvoice.jolt.modifier.DataType;
 import com.bazaarvoice.jolt.modifier.OpMode;
 import com.bazaarvoice.jolt.modifier.TemplatrSpecBuilder;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Composite spec is non-leaf level spec that contains one or many child specs and processes
@@ -66,8 +62,27 @@ public class ModifierCompositeSpec extends ModifierSpec implements OrderedCompos
     private final ExecutionStrategy executionStrategy;
     private final DataType specDataType;
 
+    //自己加的writer
+    private final List<? extends PathEvaluatingTraversal> shiftrWriters;
+
     public ModifierCompositeSpec( final String key, final Map<String, Object> spec, final OpMode opMode, TemplatrSpecBuilder specBuilder ) {
         super(key, opMode);
+
+        //自己加的下面的代码，为了加上一个writer
+        List<PathEvaluatingTraversal> writers;
+        Object rhs = spec.get("[]");
+        if ( rhs == null ) {
+            // this means someone wanted to match something, but not send it anywhere.  Basically like a removal.
+            writers = Collections.emptyList();
+        } else if ( rhs instanceof String ) {
+            writers = Arrays.asList( TRAVERSAL_BUILDER.build( rhs ) );
+        }
+        else {
+            throw new SpecException( "Invalid Shiftr spec RHS.  Should be map, string, or array of strings.  Spec in question : " + rhs );
+        }
+        shiftrWriters = Collections.unmodifiableList( writers );
+        spec.remove("[]");
+        //自己加的代码ending
 
         Map<String, ModifierSpec> literals = new LinkedHashMap<>();
         ArrayList<ModifierSpec> computed = new ArrayList<>();
@@ -136,6 +151,11 @@ public class ModifierCompositeSpec extends ModifierSpec implements OrderedCompos
         // extract generic execution strategy
         executionStrategy = determineExecutionStrategy();
 
+    }
+
+    @Override
+    public List<? extends PathEvaluatingTraversal> getShiftrWriters() {
+        return this.shiftrWriters;
     }
 
     @Override

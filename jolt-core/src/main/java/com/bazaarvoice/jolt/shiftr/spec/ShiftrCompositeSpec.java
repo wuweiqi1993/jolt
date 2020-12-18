@@ -15,8 +15,7 @@
  */
 package com.bazaarvoice.jolt.shiftr.spec;
 
-import com.bazaarvoice.jolt.common.ComputedKeysComparator;
-import com.bazaarvoice.jolt.common.ExecutionStrategy;
+import com.bazaarvoice.jolt.common.*;
 import com.bazaarvoice.jolt.common.Optional;
 import com.bazaarvoice.jolt.common.pathelement.AmpPathElement;
 import com.bazaarvoice.jolt.common.pathelement.AtPathElement;
@@ -36,13 +35,9 @@ import com.bazaarvoice.jolt.common.tree.MatchedElement;
 import com.bazaarvoice.jolt.common.tree.WalkedPath;
 import com.bazaarvoice.jolt.exception.SpecException;
 import com.bazaarvoice.jolt.shiftr.ShiftrSpecBuilder;
+import com.bazaarvoice.jolt.shiftr.ShiftrWriter;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Spec that has children, which it builds and then manages during Transforms.
@@ -69,6 +64,16 @@ public class ShiftrCompositeSpec extends ShiftrSpec implements OrderedCompositeS
     }
     */
 
+    private static final TraversalBuilder TRAVERSAL_BUILDER = new TraversalBuilder() {
+        @Override
+        @SuppressWarnings( "unchecked" )
+        public <T extends PathEvaluatingTraversal> T buildFromPath(final String path ) {
+            return (T) new ShiftrWriter( path );
+        }
+    };
+    //自己加的writer
+    private final List<? extends PathEvaluatingTraversal> shiftrWriters;
+
     private static final HashMap<Class, Integer> orderMap;
     private static final ComputedKeysComparator computedKeysComparator;
     private static final SpecBuilder<ShiftrSpec> specBuilder;
@@ -92,6 +97,22 @@ public class ShiftrCompositeSpec extends ShiftrSpec implements OrderedCompositeS
 
     public ShiftrCompositeSpec(String rawKey, Map<String, Object> spec ) {
         super( rawKey );
+
+        //自己加的下面的代码，为了加上一个writer
+        List<PathEvaluatingTraversal> writers;
+        Object rhs = spec.get("[]");
+        if ( rhs == null ) {
+            // this means someone wanted to match something, but not send it anywhere.  Basically like a removal.
+            writers = Collections.emptyList();
+        } else if ( rhs instanceof String ) {
+            writers = Arrays.asList( TRAVERSAL_BUILDER.build( rhs ) );
+        }
+        else {
+            throw new SpecException( "Invalid Shiftr spec RHS.  Should be map, string, or array of strings.  Spec in question : " + rhs );
+        }
+        shiftrWriters = Collections.unmodifiableList( writers );
+        spec.remove("[]");
+        //自己加的代码ending
 
         ArrayList<ShiftrSpec> special = new ArrayList<>();
         Map<String, ShiftrSpec> literals = new LinkedHashMap<>();
@@ -140,6 +161,10 @@ public class ShiftrCompositeSpec extends ShiftrSpec implements OrderedCompositeS
         executionStrategy = determineExecutionStrategy();
     }
 
+    @Override
+    public List<? extends PathEvaluatingTraversal> getShiftrWriters() {
+        return this.shiftrWriters;
+    }
 
     @Override
     public Map<String, ShiftrSpec> getLiteralChildren() {

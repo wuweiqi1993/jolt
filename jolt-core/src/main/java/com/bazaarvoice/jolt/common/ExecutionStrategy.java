@@ -49,6 +49,9 @@ public enum ExecutionStrategy {
         @Override
         void processList( OrderedCompositeSpec spec, List<Object> inputList, WalkedPath walkedPath, Map<String, Object> output, Map<String, Object> context ) {
 
+            //如果遇到空数组就把空数组写回去
+            writeEmptyList(spec, inputList, walkedPath, output);
+
             Integer originalSize = walkedPath.lastElement().getOrigSize().get();
             for( String key : spec.getLiteralChildren().keySet() ) {
 
@@ -116,6 +119,9 @@ public enum ExecutionStrategy {
         @Override
         void processList( OrderedCompositeSpec spec, List<Object> inputList, WalkedPath walkedPath, Map<String, Object> output, Map<String, Object> context ) {
 
+            //如果遇到空数组就把空数组写回去
+            writeEmptyList(spec, inputList, walkedPath, output);
+
             Integer originalSize = walkedPath.lastElement().getOrigSize().get();
             for( String key : spec.getLiteralChildren().keySet() ) {
 
@@ -167,6 +173,8 @@ public enum ExecutionStrategy {
 
         @Override
         void processList( OrderedCompositeSpec spec, List<Object> inputList, WalkedPath walkedPath, Map<String, Object> output, Map<String, Object> context ) {
+            //如果遇到空数组就把空数组写回去
+            writeEmptyList(spec, inputList, walkedPath, output);
 
             Integer originalSize = walkedPath.lastElement().getOrigSize().get();
             for (int index = 0; index < inputList.size(); index++) {
@@ -206,7 +214,9 @@ public enum ExecutionStrategy {
 
         @Override
         void processList( OrderedCompositeSpec spec, List<Object> inputList, WalkedPath walkedPath, Map<String, Object> output, Map<String, Object> context ) {
-
+            //如果遇到空数组就把空数组写回去
+            writeEmptyList(spec, inputList, walkedPath, output);
+            
             Integer originalSize = walkedPath.lastElement().getOrigSize().get();
             for (int index = 0; index < inputList.size(); index++) {
                 Object subInput = inputList.get( index );
@@ -273,6 +283,18 @@ public enum ExecutionStrategy {
             COMPUTED.processScalar( spec, scalarInput, walkedPath, output, context );
         }
     };
+
+    private static void writeEmptyList(OrderedCompositeSpec spec, List<Object> inputList, WalkedPath walkedPath, Map<String, Object> output) {
+        //如果遇到空数组就把空数组写回去
+        if (inputList.isEmpty()) {
+            List<? extends PathEvaluatingTraversal> traversals = spec.getShiftrWriters();
+            if (traversals != null && !traversals.isEmpty()) {
+                for ( PathEvaluatingTraversal outputPath : traversals) {
+                    outputPath.write( inputList, output, walkedPath );
+                }
+            }
+        }
+    }
 
     @SuppressWarnings( "unchecked" )
     public void process( OrderedCompositeSpec spec, Optional<Object> inputOptional, WalkedPath walkedPath, Map<String,Object> output, Map<String, Object> context ) {

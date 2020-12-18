@@ -17,6 +17,7 @@
 package com.bazaarvoice.jolt.common.spec;
 
 import com.bazaarvoice.jolt.common.ExecutionStrategy;
+import com.bazaarvoice.jolt.common.PathEvaluatingTraversal;
 
 import java.util.List;
 import java.util.Map;
@@ -38,4 +39,6 @@ public interface OrderedCompositeSpec extends BaseSpec {
     List<? extends BaseSpec> getComputedChildren();
 
     ExecutionStrategy determineExecutionStrategy();
+
+    List<? extends PathEvaluatingTraversal> getShiftrWriters();
 }
